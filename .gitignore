@@ -1,0 +1,16 @@
+# Data — never commit large or raw data files
+data/
+*.csv
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+
+# Secrets — never commit credentials
+.env
+
+# OS / editor noise
+.vscode/
+Thumbs.db
+.DS_Stores
