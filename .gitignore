@@ -22,3 +22,8 @@ logs/
 
 # personal helper script
 powershell_postgres_start.txt
+
+# Data — never commit large or raw data files
+data/
+*.csv
+!diabetes_dbt/seeds/diabetes_drug_classes.csv
