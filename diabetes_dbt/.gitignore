@@ -1,0 +1,10 @@
+
+target/
+dbt_packages/
+logs/
+.env
+# dbt secrets and clutter
+profiles.yml
+target/
+dbt_packages/
+logs/

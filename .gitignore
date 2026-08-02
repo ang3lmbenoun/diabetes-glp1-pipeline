@@ -14,3 +14,11 @@ __pycache__/
 .vscode/
 Thumbs.db
 .DS_Stores
+# dbt secrets and clutter
+profiles.yml
+target/
+dbt_packages/
+logs/
+
+# personal helper script
+powershell_postgres_start.txt
