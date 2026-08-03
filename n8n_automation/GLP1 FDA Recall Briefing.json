@@ -1,0 +1,251 @@
+{
+  "name": "GLP1 FDA Recall Briefing",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c35321cc-3311-4a22-a6c8-bd902de17f20",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.fda.gov/drug/enforcement.json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "search",
+              "value": "=openfda.brand_name:(OZEMPIC OR WEGOVY OR MOUNJARO OR ZEPBOUND OR TRULICITY OR RYBELSUS OR VICTOZA OR METFORMIN OR JANUVIA OR JARDIANCE OR LANTUS OR HUMALOG OR NOVOLOG)"
+            },
+            {
+              "name": "limit",
+              "value": "50"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "42529e7f-7fd8-49e0-bee6-1a100b06d4bf",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const drugClassSpend = {\n  \"GLP-1\": { spend: 8689247156, perRx: 1063 },\n  \"Metformin\": { spend: 126154617, perRx: 12.90 },\n  \"Insulin\": { spend: 1152774328, perRx: 170 },\n  \"DPP-4\": { spend: 946748333, perRx: 754 }\n};\n\nfunction classify(name) {\n  const n = (name || \"\").toUpperCase();\n  if (/OZEMPIC|WEGOVY|MOUNJARO|ZEPBOUND|TRULICITY|RYBELSUS|VICTOZA|SEMAGLUTIDE|TIRZEPATIDE|DULAGLUTIDE|LIRAGLUTIDE/.test(n)) return \"GLP-1\";\n  if (/METFORMIN|GLUCOPHAGE/.test(n)) return \"Metformin\";\n  if (/JANUVIA|JANUMET|TRADJENTA|ONGLYZA|SITAGLIPTIN|LINAGLIPTIN|SAXAGLIPTIN/.test(n)) return \"DPP-4\";\n  if (/INSULIN|LANTUS|HUMALOG|NOVOLOG|TRESIBA|LEVEMIR/.test(n)) return \"Insulin\";\n  return null;\n}\n\nconst records = $input.first().json.results || [];\nconst briefingRows = [];\nfor (const r of records) {\n  const brand = (r.openfda && r.openfda.brand_name && r.openfda.brand_name[0]) || \"Unknown\";\n  const cls = classify(brand);\n  if (!cls) continue;\n  briefingRows.push({ drug_class: cls, classification: r.classification || \"Unknown\", spend: drugClassSpend[cls].spend });\n}\n\n// Roll up per class\nconst classRollup = {};\nfor (const row of briefingRows) {\n  if (!classRollup[row.drug_class]) classRollup[row.drug_class] = { count: 0, spend: row.spend, severities: new Set() };\n  classRollup[row.drug_class].count++;\n  classRollup[row.drug_class].severities.add(row.classification);\n}\n\n// Fact block for the LLM (so it can reference context, but it only writes an intro)\nlet factBlock = `Total recalls: ${briefingRows.length}. Classes affected: `;\nfactBlock += Object.keys(classRollup).map(c => `${c} (${classRollup[c].count} recalls)`).join(\", \") + \".\";\n\n// Pre-build the data table rows (CODE owns every number)\nconst sevColor = (sevs) => sevs.includes(\"Class I\") ? \"#ff6b9d\" : sevs.includes(\"Class II\") ? \"#ffa45c\" : \"#7dd3a0\";\nlet tableRows = \"\";\nfor (const cls of Object.keys(classRollup)) {\n  const c = classRollup[cls];\n  const sevs = [...c.severities];\n  tableRows += `<tr>\n    <td style=\"padding:14px 18px;border-bottom:1px solid #f0e6f0;font-weight:600;color:#6b4c7a;\">${cls}</td>\n    <td style=\"padding:14px 18px;border-bottom:1px solid #f0e6f0;text-align:center;color:#9a7bab;\">${c.count}</td>\n    <td style=\"padding:14px 18px;border-bottom:1px solid #f0e6f0;text-align:center;\"><span style=\"background:${sevColor(sevs)};color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;\">${sevs.join(\", \")}</span></td>\n    <td style=\"padding:14px 18px;border-bottom:1px solid #f0e6f0;text-align:right;font-weight:700;color:#6b4c7a;\">$${(c.spend/1e9).toFixed(2)}B</td>\n  </tr>`;\n}\n\nreturn [{ json: { factBlock, tableRows, totalRecalls: briefingRows.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "71aa6122-9e2e-4a76-83f7-2ea32ee2e177",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are writing a warm, friendly one-to-two sentence intro for a pharmacy data email newsletter. Be gentle and welcoming in tone, like a caring colleague. Do NOT mention any specific numbers, dollar amounts, drug names, or recall counts — those appear elsewhere. Just a warm greeting that sets up a recall summary. Keep it under 40 words.\n\nContext (do not repeat these facts, just write a warm intro): {{ $json.data }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        832,
+        0
+      ],
+      "id": "90c62b54-08fb-41cb-b380-72ff2c08e964",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        832,
+        192
+      ],
+      "id": "e1912bcd-2e13-4bdc-9000-3bb257588f00",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "00YiEa3JzykMXaBg",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "021ee919-f817-46c8-9a44-bfb058fa3793",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the LLM's warm intro from this node's direct input\nconst llmIntro = $input.first().json.text \n  || $input.first().json.output \n  || $input.first().json.response \n  || \"Here's your gentle recall roundup for the week 💛\";\n\nconst cleanIntro = String(llmIntro).replace(/\\\\n/g, \" \").replace(/^[\"']|[\"']$/g, \"\").trim();\n\n// Reach back to the prep node (Code in JavaScript) that built the table\nconst prep = $('Code in JavaScript').first().json;\nconst tableRows = prep.tableRows;\nconst totalRecalls = prep.totalRecalls;\n\nconst html = `\n<div style=\"font-family:'Segoe UI',-apple-system,sans-serif;max-width:600px;margin:0 auto;background:#fdf4fb;padding:28px;\">\n  <div style=\"background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 8px 30px rgba(200,150,200,0.18);\">\n    <div style=\"background:linear-gradient(135deg,#ffc3e1,#c9a7ff);padding:32px 28px;text-align:center;\">\n      <div style=\"font-size:34px;\">🩷</div>\n      <h1 style=\"margin:8px 0 0;color:#fff;font-size:22px;letter-spacing:0.3px;\">Diabetes Drug Recall Briefing</h1>\n      <p style=\"margin:6px 0 0;color:#fff0f8;font-size:12px;\">Medicaid Spend · FDA Enforcement Watch</p>\n    </div>\n    <div style=\"padding:28px;\">\n      <div style=\"background:#fef7fc;border-left:4px solid #ffb3d9;border-radius:12px;padding:16px 18px;margin-bottom:22px;\">\n        <p style=\"margin:0;color:#8a6b95;font-size:14px;line-height:1.6;font-style:italic;\">${cleanIntro}</p>\n      </div>\n      <p style=\"color:#9a7bab;font-size:13px;margin:0 0 14px;\">We found <strong style=\"color:#c44e8f;\">${totalRecalls} active recalls</strong> across your diabetes drug classes 🌸</p>\n      <table style=\"width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;\">\n        <thead>\n          <tr style=\"background:#fbeef7;\">\n            <th style=\"padding:12px 18px;text-align:left;font-size:11px;color:#b088c4;letter-spacing:0.5px;\">CLASS</th>\n            <th style=\"padding:12px 18px;text-align:center;font-size:11px;color:#b088c4;\">RECALLS</th>\n            <th style=\"padding:12px 18px;text-align:center;font-size:11px;color:#b088c4;\">SEVERITY</th>\n            <th style=\"padding:12px 18px;text-align:right;font-size:11px;color:#b088c4;\">SPEND</th>\n          </tr>\n        </thead>\n        <tbody>${tableRows}</tbody>\n      </table>\n      <p style=\"color:#c9b3d6;font-size:11px;margin-top:22px;text-align:center;\">\n        🌷 Source: openFDA · Medicaid SDUD 2024 · ${new Date().toISOString().slice(0,10)}\n      </p>\n    </div>\n  </div>\n</div>`;\n\nreturn [{ json: { html } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        0
+      ],
+      "id": "648ad160-2711-40c1-9ba7-407fd6bf3d04",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "fromEmail": "meganmbenoun17@gmail.com",
+        "toEmail": "meganmbenoun17@gmail.com",
+        "subject": "=🩷 Diabetes Drug Recall Briefing — {{ $now.format('yyyy-MM-dd') }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1392,
+        0
+      ],
+      "id": "8ee611e8-7e84-433c-9353-173fdb8eab2e",
+      "name": "Send email",
+      "webhookId": "21b3f31a-f437-4ebe-b170-202d1d435490",
+      "credentials": {
+        "smtp": {
+          "id": "qASudoxemOicGPYX",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Chicago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1,
+    "availableInMCP": true
+  },
+  "versionId": "6827f33d-dc96-4f46-bf2b-405ce0ccb189",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f082b5e59f93ad720df17048ff541ce0298440505f73c102d2f9c1b6f673854b"
+  },
+  "id": "3wg7pVO6hwM3DUws",
+  "tags": []
+}
