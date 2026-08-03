@@ -6,3 +6,15 @@ MOUNJARO,Mounjaro,GLP-1
 ZEPBOUND,Zepbound,GLP-1
 TRULICITY,Trulicity,GLP-1
 VICTOZA,Victoza,GLP-1
+METFORMIN,Metformin,Metformin
+GLUCOPHAGE,Metformin,Metformin
+JANUVIA,Januvia,DPP-4
+JANUMET,Janumet,DPP-4
+TRADJENTA,Tradjenta,DPP-4
+ONGLYZA,Onglyza,DPP-4
+LANTUS,Lantus,Insulin
+HUMALOG,Humalog,Insulin
+NOVOLOG,Novolog,Insulin
+TRESIBA,Tresiba,Insulin
+LEVEMIR,Levemir,Insulin
+INSULIN,Insulin (other),Insulin

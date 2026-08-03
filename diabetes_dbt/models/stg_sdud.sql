@@ -21,3 +21,4 @@ cleaned as (
 )
 
 select * from cleaned
+where state != 'XX'
