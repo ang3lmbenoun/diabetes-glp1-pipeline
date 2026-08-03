@@ -48,7 +48,7 @@ Python · PostgreSQL · dbt · Power BI · n8n · Groq (Llama 3.3) · openFDA AP
 
 ## 📈 Dashboard
 
-![Dashboard](path/to/your/dashboard-screenshot.png)
+![Dashboard](dashboard-screenshot.png)
 
 ## 📝 Data Source
 
