@@ -12,7 +12,7 @@ An end-to-end ELT data pipeline analyzing Medicaid spending and utilization acro
 
 Across the four diabetes drug classes analyzed in Medicaid (2024), **GLP-1 agonists consumed about 80% of their combined spending (about $8.7B) despite metformin being the most-prescribed class** (9.8M prescriptions). Cost per prescription ranged from **$12.90 (metformin)** to **$1,063 (GLP-1)**, an 82x gap between the cheapest and most expensive classes.
 
-*Scope: these four classes only. Other diabetes classes, such as SGLT2 inhibitors and sulfonylureas, are outside this analysis, so the 80% describes the share among these four.*
+*Scope: these four classes only. SGLT2 inhibitors (about $3.3B in a rough keyword check of the same data) and other diabetes classes are not included, so the 80% is GLP-1's share among these four, not among all diabetes drugs. Including SGLT2 would put it near 60%.*
 
 | Drug Class | Prescriptions | Total Spend | Cost / Rx |
 |------------|--------------:|------------:|----------:|
