@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: stg_sdud
+    description: "Cleaned SDUD rows. National-total rows (state = 'XX') are excluded."
+    columns:
+      - name: state
+        description: "Two-letter state code. XX national totals are filtered out upstream."
+        data_tests:
+          - not_null
+      - name: year
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['2024']
+      - name: quarter
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['1', '2', '3', '4']
+
+  - name: fct_glp1_utilization
+    description: "Staged rows matched to the curated drug-class seed."
+    columns:
+      - name: drug_class
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['GLP-1', 'Insulin', 'DPP-4', 'Metformin']
