@@ -23,7 +23,7 @@ Across the four largest diabetes drug classes in Medicaid (2024), **GLP-1 agonis
 
 Medicaid SDUD API → Python extractor → PostgreSQL (raw) → dbt (staging + marts) → Power BI dashboard → n8n + Groq AI automation
 
-- **Extract:** Python script pulls ~5.3M rows from the Medicaid SDUD API with pagination and idempotent (truncate-reload) loading.
+- **Extract:** Python script pulls about 5.3M rows from the Medicaid SDUD API with pagination, timeouts and retries, and idempotent (truncate-reload) loading, plus a `--resume` flag to continue an interrupted load.
 - **Load:** Raw data landed in PostgreSQL, untouched, all columns as text (ELT — transform in-warehouse).
 - **Transform:** dbt models: a staging view (type casting, blank handling, national-total rows removed), a curated drug-class seed, a fact view joining the two, and class, drug, and state summary views.
 - **Test:** 8 dbt data tests, including one that fails if national-total (`XX`) rows reach staging.
