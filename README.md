@@ -10,7 +10,7 @@ An end-to-end ELT data pipeline analyzing Medicaid spending and utilization acro
 
 ## 📊 Key Finding
 
-Across the four largest diabetes drug classes in Medicaid (2024), **GLP-1 agonists consumed ~80% of total spending (~$8.7B) despite metformin being the most-prescribed class** (9.8M prescriptions). Cost per prescription ranged from **$12.90 (metformin)** to **$1,063 (GLP-1)** — an ~82x gap between the cheapest and most expensive classes.
+Across the four largest diabetes drug classes in Medicaid (2024), **GLP-1 agonists consumed about 80% of total spending (about $8.7B) despite metformin being the most-prescribed class** (9.8M prescriptions). Cost per prescription ranged from **$12.90 (metformin)** to **$1,063 (GLP-1)**, an 82x gap between the cheapest and most expensive classes.
 
 | Drug Class | Prescriptions | Total Spend | Cost / Rx |
 |------------|--------------:|------------:|----------:|
@@ -25,7 +25,8 @@ Medicaid SDUD API → Python extractor → PostgreSQL (raw) → dbt (staging + m
 
 - **Extract:** Python script pulls ~5.3M rows from the Medicaid SDUD API with pagination and idempotent (truncate-reload) loading.
 - **Load:** Raw data landed in PostgreSQL, untouched, all columns as text (ELT — transform in-warehouse).
-- **Transform:** dbt models — a staging view (type casting, suppressed-null handling), a curated drug-class seed, and star-schema fact/summary marts.
+- **Transform:** dbt models: a staging view (type casting, blank handling, national-total rows removed), a curated drug-class seed, a fact view joining the two, and class, drug, and state summary views.
+- **Test:** 8 dbt data tests, including one that fails if national-total (`XX`) rows reach staging.
 - **Visualize:** Power BI dashboard — cost-per-drug ranking, spend-vs-volume divergence by class, and a state-level choropleth.
 - **Automate:** n8n workflow cross-references live openFDA drug recalls against the spend analysis and emails a styled briefing via Groq — with all figures computed in code so the LLM never fabricates numbers.
 
@@ -34,6 +35,7 @@ Medicaid SDUD API → Python extractor → PostgreSQL (raw) → dbt (staging + m
 - **NDC/name normalization:** Product names are dosage-fragmented (e.g. `OZEMPIC 1M`, `OZEMPIC 2M`); a keyword-based `LIKE` join collapses variants back to their parent drug.
 - **Caught a 2x inflation bug:** The SDUD `XX` code represents national totals that duplicate state-level rows. Verification via row counts caught the double-count before it reached the dashboard; filtered at the staging layer.
 - **LLM fabrication guardrail:** All numbers are pre-computed in code and passed to the LLM as finished facts. The model writes prose only — it never performs arithmetic or generates figures.
+- **Enforced the fix with a test:** a dbt test now fails if any `XX` national-total row reaches staging, so the 2x inflation bug cannot return silently.
 
 ## 🛠️ Tech Stack
 
@@ -41,14 +43,41 @@ Python · PostgreSQL · dbt · Power BI · n8n · Groq (Llama 3.3) · openFDA AP
 
 ## 📁 Repo Structure
 
-- `extract_sdud.py` — API extractor
-- `diabetes_dbt/` — dbt project (models, seeds)
-- `automation/` — n8n workflow export
-- `requirements.txt` — Python dependencies
+- `extract_sdud.py`: API extractor (supports `--resume`)
+- `sql/create_raw_tables.sql`: raw table DDL
+- `.env.example`: database settings template
+- `diabetes_dbt/`: dbt project (models, seed, tests)
+- `n8n_automation/`: n8n workflow export
+- `requirements.txt`: Python dependencies
 
 ## 📈 Dashboard
 
 ![Dashboard](dashboard-screenshot.png)
+
+## Run It Yourself
+
+```powershell
+git clone https://github.com/ang3lmbenoun/diabetes-glp1-pipeline.git
+cd diabetes-glp1-pipeline
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+1. Create a Postgres database, then run `sql/create_raw_tables.sql` in it.
+2. Copy `.env.example` to `.env` and fill in your database credentials.
+3. Load the data (about 5.3M rows): `python extract_sdud.py`. Use `--resume` to continue an interrupted load.
+4. Add a profile named `diabetes_dbt` to your dbt `profiles.yml`, pointing at your database with schema `analytics`.
+5. Build and test:
+
+```powershell
+cd diabetes_dbt
+dbt seed
+dbt run
+dbt test
+```
+
+A clean run ends with 8 passing tests.
 
 ## 📝 Data Source
 
