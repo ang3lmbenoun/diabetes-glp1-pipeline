@@ -1,6 +1,6 @@
 # 💊 Diabetes Drug Spend & Utilization Pipeline
 
-An end-to-end ELT data pipeline analyzing Medicaid spending and utilization across the four largest diabetes drug classes, with an automated FDA recall-monitoring layer.
+An end-to-end ELT data pipeline analyzing Medicaid spending and utilization across four major diabetes drug classes (GLP-1 agonists, insulin, DPP-4 inhibitors, and metformin), with an automated FDA recall-monitoring layer.
 
 ![Python](https://img.shields.io/badge/Python-3.14-blue)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791)
@@ -10,7 +10,9 @@ An end-to-end ELT data pipeline analyzing Medicaid spending and utilization acro
 
 ## 📊 Key Finding
 
-Across the four largest diabetes drug classes in Medicaid (2024), **GLP-1 agonists consumed about 80% of total spending (about $8.7B) despite metformin being the most-prescribed class** (9.8M prescriptions). Cost per prescription ranged from **$12.90 (metformin)** to **$1,063 (GLP-1)**, an 82x gap between the cheapest and most expensive classes.
+Across the four diabetes drug classes analyzed in Medicaid (2024), **GLP-1 agonists consumed about 80% of their combined spending (about $8.7B) despite metformin being the most-prescribed class** (9.8M prescriptions). Cost per prescription ranged from **$12.90 (metformin)** to **$1,063 (GLP-1)**, an 82x gap between the cheapest and most expensive classes.
+
+*Scope: these four classes only. Other diabetes classes, such as SGLT2 inhibitors and sulfonylureas, are outside this analysis, so the 80% describes the share among these four.*
 
 | Drug Class | Prescriptions | Total Spend | Cost / Rx |
 |------------|--------------:|------------:|----------:|
